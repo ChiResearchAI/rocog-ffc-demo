@@ -1,0 +1,23 @@
+{
+  "generated_from": "Olmsted County public ArcGIS, Transportation_Data MapServer, layers 5 (ROCOG Functional Designation), 6 (Land Use Context Overlay) and 8 (County Minimum Corridor Needs)",
+  "segments": 12403,
+  "total_centerline_miles": 2188.8,
+  "ramp_miles_excluded": 42.8,
+  "corridors_evaluated": 1835,
+  "corridors_scoring_above_0_30": 27,
+  "future_corridors": 9,
+  "future_corridor_miles_whole": 35.9,
+  "future_designated_miles": 16.0,
+  "row_needs_miles": 532.5,
+  "row_gap_corridors": 6,
+  "weights": {
+    "c1_hierarchy_divergence": 0.25,
+    "c2_context_fit": 0.15,
+    "c3_route_continuity": 0.2,
+    "c4_authority_fit": 0.12,
+    "c5_future_exposure": 0.1,
+    "c6_row_preservation_gap": 0.18
+  },
+  "sensitivity_top50_overlap": 39,
+  "sensitivity_note": "39 of the top 50 corridors are the same under both hierarchy correspondences; the ranking is more stable than the headline mileage figures it is built from."
+}

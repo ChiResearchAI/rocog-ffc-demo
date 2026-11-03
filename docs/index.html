@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROCOG Corridor Review — Current and Future Classification</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#fff; --ink:#191c1b; --muted:#5c625f; --faint:#878d8a;
+  --rule:#d9d7d1; --rule2:#eceae5;
+  --now:#2d6a8f;      /* current classification */
+  --future:#1f5c54;   /* future designation */
+  --flag:#b4531a;     /* attention */
+  --warn:#8a6d1f;
+  --fd:"IBM Plex Sans Condensed",Arial,sans-serif;
+  --fb:"IBM Plex Sans",Helvetica,Arial,sans-serif;
+  --fm:"IBM Plex Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#131617; --panel:#1b1f20; --ink:#e9eae8; --muted:#a3a9a6; --faint:#7d8estrong;
+  --faint:#7d8582; --rule:#2f3537; --rule2:#242a2b;
+  --now:#63a8cd; --future:#5fb3a5; --flag:#e08c53; --warn:#cfae5a;
+  color-scheme:dark;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:15px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding:0 18px 64px}
+a{color:var(--future)}
+h1{font-family:var(--fd);font-size:clamp(1.55rem,3.6vw,2.2rem);margin:0;line-height:1.14}
+h2{font-family:var(--fd);font-size:1.2rem;margin:0 0 4px}
+h3{font-family:var(--fd);font-size:.95rem;margin:0 0 6px}
+.eyebrow{font-family:var(--fm);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+header{border-bottom:2px solid var(--ink);padding:32px 0 18px}
+.lede{color:var(--muted);max-width:64ch;margin:12px 0 0}
+.disclaim{background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--flag);
+  padding:11px 14px;margin:18px 0;font-size:.875rem;color:var(--muted)}
+.disclaim b{color:var(--ink)}
+
+.premise{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:24px 0 6px}
+.premise div{background:var(--panel);border:1px solid var(--rule);padding:13px 15px}
+.premise h3{color:var(--ink)}
+.premise p{margin:0;font-size:.86rem;color:var(--muted)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin:22px 0}
+.stat{background:var(--panel);border:1px solid var(--rule);padding:10px 12px}
+.stat b{display:block;font-family:var(--fd);font-size:1.45rem;line-height:1.1}
+.stat span{font-size:.7rem;color:var(--muted);font-family:var(--fm);text-transform:uppercase;letter-spacing:.05em;display:block;margin-top:2px}
+
+.sec{margin-top:40px}
+.sechead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.secsub{font-size:.85rem;color:var(--muted);margin:0}
+
+.layout{display:grid;grid-template-columns:1.45fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+#map{height:460px;border:1px solid var(--rule);background:var(--panel)}
+.detail{background:var(--panel);border:1px solid var(--rule);padding:16px;min-height:460px}
+.empty{color:var(--faint);font-size:.88rem;font-family:var(--fm)}
+
+.pair{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin:12px 0 4px}
+.pair .box{border:1px solid var(--rule);padding:9px 11px;min-width:0}
+.pair .box.now{border-left:3px solid var(--now)}
+.pair .box.fut{border-left:3px solid var(--future)}
+.pair .lbl{font-family:var(--fm);font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:block}
+.pair .val{font-family:var(--fd);font-size:1rem;line-height:1.25;margin-top:3px;overflow-wrap:anywhere}
+.arrow{font-family:var(--fm);color:var(--faint);font-size:1.1rem}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.85rem;margin:12px 0}
+.kv dt{font-family:var(--fm);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+.kv dd{margin:0}
+.tag{font-family:var(--fm);font-size:.66rem;padding:1px 6px;border:1px solid currentColor;white-space:nowrap}
+.tag.improve{color:var(--flag)} .tag.maintain{color:var(--muted)}
+.tag.fut{color:var(--future)} .tag.gap{color:var(--flag)}
+
+.crit{margin-top:14px}
+.critrow{display:grid;grid-template-columns:1fr 70px 38px;gap:8px;align-items:center;font-size:.8rem;margin:3px 0}
+.critrow .nm{color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.ctrack{height:7px;background:var(--rule2);border:1px solid var(--rule)}
+.cfill{height:100%;background:var(--flag)}
+.cval{font-family:var(--fm);font-variant-numeric:tabular-nums;text-align:right;color:var(--muted)}
+
+.ordbox{margin-top:14px;border-top:1px solid var(--rule);padding-top:12px}
+.ordtable{width:100%;border-collapse:collapse;font-size:.78rem;font-family:var(--fm)}
+.ordtable th,.ordtable td{padding:3px 5px;border-bottom:1px solid var(--rule2);text-align:right}
+.ordtable th:first-child,.ordtable td:first-child{text-align:left;font-family:var(--fb)}
+.ordtable th{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:500}
+
+.controls{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0 10px;align-items:center}
+input[type=search],select{font-family:var(--fb);font-size:.88rem;padding:7px 9px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);min-width:0}
+input[type=search]{flex:1 1 210px}
+button{font-family:var(--fb);font-size:.84rem;padding:7px 11px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--ink)}
+:focus-visible{outline:2px solid var(--future);outline-offset:2px}
+
+.weights{background:var(--panel);border:1px solid var(--rule);padding:14px 16px}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:10px 20px;margin-top:10px}
+.wrow label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:2px}
+.wrow .wline{display:flex;gap:9px;align-items:center}
+.wrow input[type=range]{flex:1;min-width:0;accent-color:var(--future)}
+.wrow .wv{font-family:var(--fm);font-size:.78rem;width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.wfoot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;font-size:.8rem;color:var(--muted);font-family:var(--fm)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);background:var(--panel);max-height:620px;overflow-y:auto}
+table.main{border-collapse:collapse;width:100%;font-size:.84rem}
+table.main th,table.main td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--rule2);vertical-align:top}
+table.main th{font-family:var(--fm);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+  font-weight:500;white-space:nowrap;position:sticky;top:0;background:var(--panel);cursor:pointer;z-index:2;border-bottom:1px solid var(--rule)}
+table.main td.n{text-align:right;font-family:var(--fm);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.main tbody tr{cursor:pointer}
+table.main tbody tr:hover{background:var(--rule2)}
+table.main tbody tr.sel{background:color-mix(in srgb,var(--future) 14%,transparent)}
+.mv{font-family:var(--fm);font-size:.72rem;color:var(--faint)}
+.sbar{display:flex;height:11px;width:104px;border:1px solid var(--rule);background:var(--rule2)}
+.sbar i{display:block;height:100%}
+.scell{display:flex;align-items:center;gap:7px;justify-content:flex-end}
+.delta{font-family:var(--fm);font-size:.7rem;width:30px;text-align:right}
+.up{color:var(--future)} .down{color:var(--flag)}
+.stable{font-family:var(--fm);font-size:.64rem;padding:1px 5px;border:1px solid var(--future);color:var(--future);white-space:nowrap}
+.presets{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px}
+.presets button.on{border-color:var(--future);color:var(--future)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 13px;font-family:var(--fm);font-size:.68rem;color:var(--muted);margin-top:9px}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:4px}
+.note{font-size:.78rem;color:var(--muted);font-family:var(--fm);margin-top:7px}
+
+.method{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin-top:12px}
+.method div{background:var(--panel);border:1px solid var(--rule);padding:14px 16px}
+.method p{font-size:.85rem;color:var(--muted);margin:.4rem 0 0}
+.method ol{margin:.4rem 0 0;padding-left:17px;font-size:.84rem;color:var(--muted)}
+.method li{margin:.35rem 0}
+footer{margin-top:44px;border-top:1px solid var(--rule);padding-top:15px;font-family:var(--fm);font-size:.76rem;color:var(--muted);line-height:1.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Working demonstration · ChiResearch Technologies, LLC</p>
+  <h1>Current and future classification,<br>on one screen</h1>
+  <p class="lede">Every corridor in the ROCOG planning area, scored against the principles a
+  classification update has to apply — and shown with what its designation already commits the
+  County to on the ground.</p>
+</header>
+
+<div class="disclaim">
+  <b>What this is.</b> A working example built on Olmsted County's published GIS. It is not deployed
+  software, not a ROCOG product, and it recommends no classification change. The criteria and weights
+  below are ChiResearch's own proposal, offered to be argued with — not adopted policy. What it does
+  is rank where a planner should look, and show the evidence behind each position.
+</div>
+
+<div class="premise">
+  <div>
+    <h3>Two systems, one view</h3>
+    <p>The federal functional class governs funding and design today. ROCOG's designation records the
+    intended future function. They are maintained as separate maps. Here each corridor carries both.</p>
+  </div>
+  <div>
+    <h3>What a classification commits</h3>
+    <p>A designation is a land commitment. The County preserves right-of-way by class, and Access
+    Management Ordinance Ch. 1300 sets driveway and street spacing by class. Both are shown per corridor.</p>
+  </div>
+  <div>
+    <h3>Weights you can move</h3>
+    <p>The ranking is a weighted sum of six criteria. Move the weights and it recomputes against all
+    1,835 corridors in the browser. Disagreement with the method should be testable, not theoretical.</p>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<section class="sec">
+  <div class="sechead">
+    <div>
+      <h2>Corridor review</h2>
+      <p class="secsub">Select a corridor on the map or in the table.</p>
+    </div>
+  </div>
+  <div class="layout">
+    <div id="map"></div>
+    <aside class="detail" id="detail"><p class="empty">Select a corridor to see its current and future
+      classification, the criteria behind its rank, and what its designation commits.</p></aside>
+  </div>
+  <p class="note" id="mapnote"></p>
+</section>
+
+<section class="sec">
+  <div class="sechead">
+    <div>
+      <h2>Criterion weights</h2>
+      <p class="secsub">The ranking recomputes live. Nothing is saved; reload restores the defaults.</p>
+    </div>
+    <button id="resetw" type="button">Reset to proposed weights</button>
+  </div>
+  <div class="presets" id="presets"></div>
+  <div class="weights">
+    <div class="wgrid" id="wgrid"></div>
+    <div class="legend" id="wlegend"></div>
+    <div class="wfoot">
+      <span id="wsum"></span>
+      <span id="wmoved"></span>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sechead"><div><h2>All corridors</h2>
+    <p class="secsub">Click a column to sort. Click a row to select.</p></div></div>
+  <div class="controls">
+    <input id="q" type="search" placeholder="Filter by corridor, jurisdiction, designation…" aria-label="Filter corridors">
+    <select id="juris" aria-label="Jurisdiction"><option value="">All jurisdictions</option></select>
+    <select id="sub" aria-label="Subclass">
+      <option value="">Maintain and Improve</option>
+      <option value="Improve">Improve only</option>
+      <option value="Maintain">Maintain only</option>
+    </select>
+    <select id="flagsel" aria-label="Flags">
+      <option value="">No flag filter</option>
+      <option value="future">Future corridors</option>
+      <option value="rowgap">Right-of-way gap</option>
+    </select>
+  </div>
+  <div class="tablewrap">
+    <table class="main" id="tbl">
+      <thead><tr>
+        <th data-k="rank">#</th>
+        <th data-k="corridor_name">Corridor</th>
+        <th data-k="jurisdiction">Jurisdiction</th>
+        <th data-k="miles" class="n">Miles</th>
+        <th data-k="current_federal_class">Current federal class</th>
+        <th data-k="designation">Future ROCOG designation</th>
+        <th data-k="score" class="n">Score</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="note" id="count"></p>
+</section>
+
+<section class="sec">
+  <h2>Method, and what it cannot tell you</h2>
+  <div class="method">
+    <div>
+      <h3>How a corridor is scored</h3>
+      <ol id="critlist"></ol>
+      <p>A corridor is a named route within one jurisdiction. Corridors under 0.10 miles are dropped.
+      Interchange ramps are excluded — they inherit the mainline designation while carrying a Local
+      federal class, and counting them as corridors inflates everything.</p>
+    </div>
+    <div>
+      <h3>Limits worth stating</h3>
+      <ol>
+        <li><b>The hierarchy correspondence is ours.</b> ROCOG has nine designations, the federal
+          system six, and no published crosswalk between them. Two defensible mappings are run; the
+          table shows how far each corridor moves between them.</li>
+        <li><b>Right-of-way coverage is matched by name</b> within jurisdiction. It detects a missing
+          record, not an inadequate width.</li>
+        <li><b>41.2 miles sit outside the land use overlay</b>, and the planning area extends past the
+          county line into Pine Island and Chatfield, which this county data does not reach.</li>
+        <li><b>Centerline miles, not travel.</b> No volume, crash, freight or transit data. This
+          measures how the network is labelled, not how it performs.</li>
+        <li><b>One figure excluded.</b> Every segment carries a federal class, so "coverage" is 100%
+          by construction. Nothing is inferred from it.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Data: Olmsted County public ArcGIS, <code>Transportation_Data</code> MapServer — layer 5 ROCOG
+  Functional Designation, layer 6 Land Use Context Overlay, layer 8 County Minimum Corridor Needs.
+  Snapshot 2 November 2026.<br>
+  Access spacing from Olmsted County Access Management Ordinance Ch. 1300, Table 2 (508C, 2 May 2018).<br>
+  ChiResearch Technologies, LLC · Hyattsville, Maryland. Not a ROCOG or Olmsted County publication.
+</footer>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CRIT = [
+  ["c1_hierarchy_divergence","Hierarchy divergence","Gap between the ROCOG designation and the federal class on the same segments."],
+  ["c2_context_fit","Land use context fit","Designation sits outside the usual band for its land use context."],
+  ["c3_route_continuity","Route continuity","One named route carrying several different designations."],
+  ["c4_authority_fit","Road authority fit","Designation unusual for the road system that holds it."],
+  ["c5_future_exposure","Future corridor exposure","Future corridors held by township or county authorities."],
+  ["c6_row_preservation_gap","Right-of-way gap","Arterial or collector function with no recorded minimum corridor need."],
+];
+const CRIT_COLOR = ["#1f5c54","#2d6a8f","#5a8f6a","#8a6d1f","#a8653a","#b4531a"];
+const PRESETS = {
+  "Proposed":        null,
+  "Equal weights":   {c1_hierarchy_divergence:.167,c2_context_fit:.167,c3_route_continuity:.167,
+                      c4_authority_fit:.167,c5_future_exposure:.166,c6_row_preservation_gap:.166},
+  "Corridor preservation": {c1_hierarchy_divergence:.10,c2_context_fit:.10,c3_route_continuity:.15,
+                      c4_authority_fit:.10,c5_future_exposure:.25,c6_row_preservation_gap:.30},
+  "Classification consistency": {c1_hierarchy_divergence:.35,c2_context_fit:.20,c3_route_continuity:.30,
+                      c4_authority_fit:.15,c5_future_exposure:.00,c6_row_preservation_gap:.00},
+};
+const SPACING_COLS = ["Urban local street","Rural local street","Driveway <35 mph","Driveway 35–45","Driveway >45"];
+
+let ROWS=[], SUM={}, W0={}, W={}, sortKey="rank", sortDir=1, selected=null, layer=null, map=null;
+let STABLE_N=0, SAMPLES=400;
+const STABLE_T=0.90;
+const byId = {}, BASE = {}, STABLE = {};
+
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = v => (v===null||v===undefined||Number.isNaN(v)) ? null : v;
+
+function score(r,w){let s=0;for(const [k] of CRIT)s+=(w[k]||0)*(r[k]||0);return s;}
+
+// Rank under the proposed weighting, fixed once so movement is always measured against it.
+function computeBaseline(){
+  const b=ROWS.map(r=>({c:r.corridor,s:score(r,W0)})).sort((a,b)=>b.s-a.s);
+  b.forEach((x,i)=>{BASE[x.c]=i+1;});
+}
+
+// Weight-space sampling. Rather than ask which corridors rank highly under OUR weights,
+// draw weightings at random across the whole simplex and ask how often each corridor holds
+// the top 50 regardless. The corridors that hold it almost always are the ones a divided
+// committee can agree on before it argues about weights.
+// Reported as a percentage, not a pass/fail: under uniform sampling no corridor holds the
+// top 50 under every weighting, because the sample includes weightings nobody would defend.
+function computeStability(samples){
+  const keys=CRIT.map(c=>c[0]), count={};
+  for(let t=0;t<samples;t++){
+    const w={},raw=keys.map(()=>Math.random()),tot=raw.reduce((a,b)=>a+b,0);
+    keys.forEach((k,i)=>w[k]=raw[i]/tot);
+    ROWS.map(r=>({c:r.corridor,s:score(r,w)})).sort((a,b)=>b.s-a.s).slice(0,50)
+      .forEach(x=>count[x.c]=(count[x.c]||0)+1);
+  }
+  ROWS.forEach(r=>{ STABLE[r.corridor]=(count[r.corridor]||0)/samples; });
+  return ROWS.filter(r=>STABLE[r.corridor]>=STABLE_T).length;
+}
+
+function recompute(){
+  const scored = ROWS.map(r=>({...r,score:score(r,W)}))
+    .sort((a,b)=>b.score-a.score);
+  scored.forEach((r,i)=>{r.rank=i+1;});
+  ROWS = scored;
+  ROWS.forEach(r=>byId[r.corridor]=r);
+}
+
+function renderStats(){
+  const s=SUM;
+  const items=[
+    [ (s.corridors_evaluated||0).toLocaleString(), "corridors scored"],
+    [ (s.total_centerline_miles||0).toLocaleString(), "centerline miles"],
+    [ s.future_designated_miles, "future-designated miles"],
+    [ s.row_needs_miles, "miles of corridor need"],
+    [ s.row_gap_corridors, "right-of-way gaps"],
+    [ (s.sensitivity_top50_overlap||0)+"/50", "stable across mappings"],
+  ];
+  document.getElementById("stats").innerHTML =
+    items.map(([b,t])=>`<div class="stat"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join("");
+}
+
+function renderWeights(){
+  document.getElementById("wgrid").innerHTML = CRIT.map(([k,label])=>`
+    <div class="wrow">
+      <label for="w_${k}">${esc(label)}</label>
+      <div class="wline">
+        <input type="range" id="w_${k}" min="0" max="0.6" step="0.01" value="${W[k]}" data-k="${k}">
+        <span class="wv" id="wv_${k}">${W[k].toFixed(2)}</span>
+      </div>
+    </div>`).join("");
+  document.querySelectorAll('input[type=range]').forEach(el=>{
+    el.addEventListener("input",e=>{
+      const k=e.target.dataset.k;
+      W[k]=parseFloat(e.target.value);
+      document.getElementById("wv_"+k).textContent=W[k].toFixed(2);
+      recompute(); renderTable(); styleMap(); updateWFoot();
+      if(selected) renderDetail(byId[selected]);
+    });
+  });
+  updateWFoot();
+}
+
+function updateWFoot(){
+  const sum=Object.values(W).reduce((a,b)=>a+b,0);
+  document.getElementById("wsum").textContent = `weights sum to ${sum.toFixed(2)}`;
+  const nowTop=new Set(ROWS.slice(0,50).map(r=>r.corridor));
+  let differ=0;
+  Object.keys(BASE).forEach(c=>{ if(BASE[c]<=50 && !nowTop.has(c)) differ++; });
+  document.getElementById("wmoved").textContent =
+    (differ===0 ? "top 50 unchanged from the proposed weighting" :
+     `${differ} of the top 50 differ from the proposed weighting`) +
+    ` · ${STABLE_N} corridors hold the top 50 under ≥${(STABLE_T*100).toFixed(0)}% of ${SAMPLES} sampled weightings`;
+  document.querySelectorAll("#presets button").forEach(b=>{
+    const t=PRESETS[b.dataset.p]||W0;
+    b.classList.toggle("on", CRIT.every(([k])=>Math.abs((t[k]||0)-W[k])<0.005));
+  });
+}
+
+function applyPreset(name){
+  const t=PRESETS[name]||W0;
+  CRIT.forEach(([k])=>{
+    W[k]=t[k]||0;
+    const el=document.getElementById("w_"+k);
+    if(el){el.value=W[k];document.getElementById("wv_"+k).textContent=W[k].toFixed(2);}
+  });
+  recompute(); renderTable(); styleMap(); updateWFoot();
+  if(selected) renderDetail(byId[selected]);
+}
+
+function renderPresets(){
+  document.getElementById("presets").innerHTML =
+    Object.keys(PRESETS).map(n=>`<button type="button" data-p="${esc(n)}">${esc(n)}</button>`).join("");
+  document.querySelectorAll("#presets button").forEach(b=>
+    b.addEventListener("click",()=>applyPreset(b.dataset.p)));
+  document.getElementById("wlegend").innerHTML =
+    CRIT.map(([k,label],i)=>`<span><i style="background:${CRIT_COLOR[i]}"></i>${esc(label)}</span>`).join("");
+}
+
+function filtered(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  const j=document.getElementById("juris").value;
+  const sb=document.getElementById("sub").value;
+  const fl=document.getElementById("flagsel").value;
+  return ROWS.filter(r=>{
+    if(j && r.jurisdiction!==j) return false;
+    if(sb && r.subclass!==sb) return false;
+    if(fl==="future" && !r.future_corridor) return false;
+    if(fl==="rowgap" && !(r.c6_row_preservation_gap>0)) return false;
+    if(!q) return true;
+    return (r.corridor_name+" "+r.jurisdiction+" "+r.designation+" "+(r.current_federal_class||""))
+      .toLowerCase().includes(q);
+  });
+}
+
+function renderTable(){
+  const rows=filtered().slice().sort((a,b)=>{
+    const x=a[sortKey],y=b[sortKey];
+    if(typeof x==="number"&&typeof y==="number") return (x-y)*sortDir;
+    return String(x??"").localeCompare(String(y??""))*sortDir;
+  });
+  const max=Math.max(...ROWS.map(r=>r.score),0.0001);
+  document.querySelector("#tbl tbody").innerHTML = rows.slice(0,400).map(r=>{
+    const moved=(BASE[r.corridor]||r.rank)-r.rank;   // + means it rose vs the proposed weighting
+    const mv = moved===0 ? '<span class="delta"></span>'
+      : `<span class="delta ${moved>0?"up":"down"}" title="movement against the proposed weighting">${moved>0?"▲":"▼"}${Math.abs(moved)}</span>`;
+    const seg = CRIT.map(([k],i)=>{
+      const c=(W[k]||0)*(r[k]||0);
+      return c<=0?"":`<i style="width:${(c/max*100).toFixed(2)}%;background:${CRIT_COLOR[i]}" title="${esc(CRIT[i][1])}: ${c.toFixed(3)}"></i>`;
+    }).join("");
+    const tags=[
+      r.subclass==="Improve"?'<span class="tag improve">Improve</span>':"",
+      r.future_corridor?'<span class="tag fut">future</span>':"",
+      r.c6_row_preservation_gap>0?'<span class="tag gap">ROW gap</span>':"",
+      STABLE[r.corridor]>=STABLE_T?`<span class="stable" title="holds the top 50 under ${(STABLE[r.corridor]*100).toFixed(0)}% of ${SAMPLES} randomly sampled weightings">robust ${(STABLE[r.corridor]*100).toFixed(0)}%</span>`:"",
+    ].join(" ");
+    return `<tr data-c="${esc(r.corridor)}" class="${selected===r.corridor?"sel":""}">
+      <td class="n">${r.rank}</td>
+      <td>${esc(r.corridor_name)} ${tags}</td>
+      <td>${esc(r.jurisdiction)}</td>
+      <td class="n">${r.miles.toFixed(2)}</td>
+      <td>${esc(r.current_federal_class||"—")}</td>
+      <td>${esc(r.designation)}</td>
+      <td class="n"><span class="scell">${mv}<span class="sbar">${seg}</span>${r.score.toFixed(3)}</span></td>
+    </tr>`;
+  }).join("");
+  document.querySelectorAll("#tbl tbody tr").forEach(tr=>{
+    tr.addEventListener("click",()=>select(tr.dataset.c,true));
+  });
+  document.getElementById("count").textContent =
+    `${rows.length.toLocaleString()} corridors${rows.length>400?" — first 400 listed":""}`;
+}
+
+function renderDetail(r){
+  if(!r){document.getElementById("detail").innerHTML='<p class="empty">Select a corridor.</p>';return;}
+  const sp=r.access_spacing;
+  let ord="";
+  if(sp&&r.ordinance_row){
+    ord=`<div class="ordbox"><h3>What this designation commits</h3>
+      <p class="secsub">Minimum access spacing under Access Management Ordinance Ch. 1300, Table 2,
+      as the <b>${esc(r.ordinance_row)}</b> row. Reclassify the corridor and every figure here changes.</p>
+      <table class="ordtable"><tbody>
+      ${SPACING_COLS.map((c,i)=>`<tr><td>${esc(c)}</td><td>${sp[i]===null?"—":sp[i]+" ft"}</td></tr>`).join("")}
+      </tbody></table></div>`;
+  }
+  const rowft = num(r.row_required_ft);
+  document.getElementById("detail").innerHTML = `
+    <p class="eyebrow">Rank ${r.rank} of ${ROWS.length.toLocaleString()} · score ${r.score.toFixed(3)}</p>
+    <h2>${esc(r.corridor_name)}</h2>
+    <p class="secsub">${esc(r.jurisdiction)} · ${r.miles.toFixed(2)} mi · ${esc(r.road_systems||"—")} ·
+      ${esc(r.context||"—")} context</p>
+    <div class="pair">
+      <div class="box now"><span class="lbl">Classified today</span>
+        <span class="val">${esc(r.current_federal_class||"—")}</span></div>
+      <span class="arrow">→</span>
+      <div class="box fut"><span class="lbl">Intended future function</span>
+        <span class="val">${esc(r.designation)}</span></div>
+    </div>
+    <dl class="kv">
+      <dt>Subclass</dt><dd>${r.subclass?`<span class="tag ${r.subclass==="Improve"?"improve":"maintain"}">${esc(r.subclass)}</span> ${r.subclass==="Improve"?"— reaching this function needs construction or right-of-way":"— reached through routine preservation"}`:"—"}</dd>
+      <dt>Designations on route</dt><dd>${r.n_designations}${r.n_designations>1?" — the corridor is not labelled consistently end to end":""}</dd>
+      <dt>Corridor need</dt><dd>${r.row_recorded?"recorded":"<b>none recorded</b>"}${rowft?` · ${rowft} ft standard for this designation`:" · no right-of-way standard exists for this designation"}</dd>
+      <dt>Alt. mapping</dt><dd>rank ${r.rank_alt ?? "—"}${r.rank_delta?` (${r.rank_delta>0?"+":""}${r.rank_delta})`:""}</dd>
+      <dt>Robustness</dt><dd>${STABLE[r.corridor]!==undefined&&STABLE[r.corridor]>0
+        ? `holds the top 50 under <b>${(STABLE[r.corridor]*100).toFixed(0)}%</b> of ${SAMPLES} sampled weightings`
+        : `does not reach the top 50 under any of ${SAMPLES} sampled weightings`}</dd>
+    </dl>
+    <div class="crit"><h3>Why it ranks here</h3>
+      ${CRIT.map(([k,label])=>{
+        const v=r[k]||0, contrib=(W[k]||0)*v;
+        return `<div class="critrow"><span class="nm">${esc(label)}</span>
+          <span class="ctrack"><span class="cfill" style="width:${(v*100).toFixed(0)}%"></span></span>
+          <span class="cval">${contrib.toFixed(3)}</span></div>`;
+      }).join("")}
+    </div>
+    ${ord}`;
+}
+
+function select(cid,fly){
+  selected=cid;
+  renderTable(); renderDetail(byId[cid]); styleMap();
+  if(fly&&layer){
+    layer.eachLayer(l=>{ if(l.feature.properties.corridor_id===cid){
+      try{map.fitBounds(l.getBounds(),{padding:[40,40],maxZoom:14});}catch(e){} }});
+  }
+}
+
+function colorFor(r){
+  if(!r) return "#9aa3a0";
+  if(r.rank<=10) return getCss("--flag");
+  if(r.rank<=40) return getCss("--warn");
+  return getCss("--future");
+}
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#888";}
+
+function styleMap(){
+  if(!layer)return;
+  layer.eachLayer(l=>{
+    const r=byId[l.feature.properties.corridor_id];
+    const sel = selected===l.feature.properties.corridor_id;
+    l.setStyle({color: sel? getCss("--now") : colorFor(r),
+      weight: sel?7:(r&&r.rank<=10?5:3), opacity: sel?1:.85});
+    if(sel) l.bringToFront();
+  });
+}
+
+document.querySelectorAll("#tbl thead th[data-k]").forEach(th=>{
+  th.addEventListener("click",()=>{
+    const k=th.dataset.k;
+    sortDir=(sortKey===k)?-sortDir:(k==="rank"?1:-1);
+    sortKey=k; renderTable();
+  });
+});
+["q","juris","sub","flagsel"].forEach(id=>
+  document.getElementById(id).addEventListener("input",renderTable));
+document.getElementById("resetw").addEventListener("click",()=>{
+  W={...W0};
+  CRIT.forEach(([k])=>{const el=document.getElementById("w_"+k);
+    if(el){el.value=W[k];document.getElementById("wv_"+k).textContent=W[k].toFixed(2);}});
+  recompute(); renderTable(); styleMap(); updateWFoot();
+  if(selected) renderDetail(byId[selected]);
+});
+
+document.getElementById("critlist").innerHTML =
+  CRIT.map(([k,label,desc])=>`<li><b>${esc(label)}</b> — ${esc(desc)}</li>`).join("");
+
+map=L.map("map",{scrollWheelZoom:false}).setView([44.02,-92.47],10);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {maxZoom:18,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
+
+fetch("candidates.json").then(r=>r.json()).then(d=>{
+  SUM=d.summary; W0={...d.weights}; W={...d.weights};
+  ROWS=d.rows.map(r=>({...r}));
+  recompute(); computeBaseline();
+  STABLE_N=computeStability(SAMPLES);
+  renderPresets();
+  const js=[...new Set(ROWS.map(r=>r.jurisdiction))].sort();
+  document.getElementById("juris").insertAdjacentHTML("beforeend",
+    js.map(j=>`<option value="${esc(j)}">${esc(j)}</option>`).join(""));
+  renderStats(); renderWeights(); renderTable();
+  return fetch("corridors.geojson").then(r=>r.json());
+}).then(gj=>{
+  layer=L.geoJSON(gj,{
+    style:()=>({weight:3,opacity:.85}),
+    onEachFeature:(f,l)=>{
+      l.on("click",()=>select(f.properties.corridor_id,false));
+      l.bindTooltip(f.properties.corridor_id,{sticky:true});
+    }
+  }).addTo(map);
+  styleMap();
+  try{map.fitBounds(layer.getBounds(),{padding:[18,18]});}catch(e){}
+  document.getElementById("mapnote").textContent =
+    `Mapped: the ${gj.features.length} highest-ranked corridors under the proposed weights. ` +
+    `Geometry simplified for display; scoring runs on full geometry.`;
+}).catch(e=>{
+  document.querySelector("#tbl tbody").innerHTML =
+    `<tr><td colspan="7">Could not load data — run <code>src/evaluate.py</code> and <code>src/export_geo.py</code> first.</td></tr>`;
+});
+</script>
+</body>
+</html>
